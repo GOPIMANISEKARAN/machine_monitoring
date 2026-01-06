@@ -94,14 +94,37 @@
           setMachines(parsed);
           localStorage.setItem('machines-config', JSON.stringify(parsed));
         } else {
-          const defaultMachines = [{
-            id: "CMTB002",
-            name: "Abrasive cutting machine - ATM",
-            documentNumber: "02-QES-LAB-ML-005",
-            dailyCheckpoints: ["Check blade condition"],
-            weeklyCheckpoints: [],
-            monthlyCheckpoints: []
-          }];
+          // YOUR MACHINE CONFIGURATION - Edit this section with your actual machines
+          const defaultMachines = [
+            {
+              id: "CMTB002",
+              name: "Abrasive cutting machine - ATM",
+              documentNumber: "02-QES-LAB-ML-005",
+              dailyCheckpoints: [
+                "Check blade condition",
+                "Verify coolant level",
+                "Inspect safety guards"
+              ],
+              weeklyCheckpoints: [
+                "Check blade tension",
+                "Lubricate moving parts"
+              ],
+              monthlyCheckpoints: [
+                "Complete blade inspection",
+                "Calibration check"
+              ]
+            },
+            // Add more machines here by copying the structure above
+            // Example:
+            // {
+            //   id: "M002",
+            //   name: "CNC Lathe Machine",
+            //   documentNumber: "DOC-002",
+            //   dailyCheckpoints: ["Check tool condition", "Oil level check"],
+            //   weeklyCheckpoints: ["Chuck inspection"],
+            //   monthlyCheckpoints: ["Complete service"]
+            // }
+          ];
           setMachines(defaultMachines);
           localStorage.setItem('machines-config', JSON.stringify(defaultMachines));
         }
@@ -193,10 +216,45 @@
         saveMachinesConfig([...machines, newMachine]);
       };
 
-      const deleteMachine = (machineId) => {
-        if (confirm('Are you sure you want to delete this machine?')) {
-          const updated = machines.filter(m => m.id !== machineId);
-          saveMachinesConfig(updated);
+      const exportConfiguration = () => {
+        const config = {
+          machines: machines,
+          exportDate: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `machine-config-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+      };
+
+      const importConfiguration = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const config = JSON.parse(e.target.result);
+              if (config.machines && Array.isArray(config.machines)) {
+                saveMachinesConfig(config.machines);
+                alert('Configuration imported successfully!');
+              } else {
+                alert('Invalid configuration file format.');
+              }
+            } catch (error) {
+              alert('Error reading configuration file.');
+            }
+          };
+          reader.readAsText(file);
+        }
+      };
+
+      const resetToDefaults = () => {
+        if (confirm('This will reset all machines to default configuration. Are you sure?')) {
+          localStorage.removeItem('machines-config');
+          initializeMachines();
+          alert('Configuration reset to defaults.');
         }
       };
 
@@ -689,12 +747,41 @@
               <div>
                 <div className="bg-white p-6 rounded-lg shadow mb-6">
                   <h2 className="text-2xl font-bold mb-4">Machine Settings</h2>
-                  <button
-                    onClick={addNewMachine}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    + Add New Machine
-                  </button>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={addNewMachine}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      + Add New Machine
+                    </button>
+                    <button
+                      onClick={exportConfiguration}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      📥 Export Config
+                    </button>
+                    <label className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 cursor-pointer">
+                      📤 Import Config
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={importConfiguration}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      onClick={resetToDefaults}
+                      className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+                    >
+                      🔄 Reset to Defaults
+                    </button>
+                  </div>
+                  <div className="mt-4 p-4 bg-blue-50 rounded">
+                    <p className="text-sm text-blue-800">
+                      <strong>💡 Tip:</strong> Export your configuration to save it as a backup file. 
+                      You can import this file on any device to use the same machine settings.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-6">
